@@ -28,6 +28,46 @@ function getCourseData(term?: string, school?: string, subject?: string) {
   return filteredData;
 }
 
+function getProfessorData(professor: string){
+  const files = fs.readdirSync("data/");
+  let professorCourses = []
+  for (const fileName of files) {
+    const data = path.parse(fileName).name;
+    const [term, school, subject] = data.split("_");
+    
+    const coursesData = JSON.parse(
+      fs.readFileSync("data/" + fileName, { encoding: "utf8" })
+    ).coursesData;
+    
+    const filteredData = coursesData.filter((course: any) => {
+      const re = new RegExp(`${professor}\\b`, "i");
+      return re.test(course["metadata"]["Instructor(s)"]);
+    });
+    
+    const cleanData = filteredData.flatMap((course: any) => { 
+      return {term, 
+              school, 
+              subject,
+              name: course["metadata"]["Class Description"],
+              "Instuctor(s)": course["metadata"]["Instructor(s)"]
+              }
+
+    });
+    professorCourses.push(cleanData);
+  }
+  return professorCourses.flat();
+}
+
+coursesRouter.get("/professor-search/", (req, res) => {
+  const professor = req.body.professor;
+
+  const professorData = getProfessorData(professor);
+
+  res.json(professorData);
+
+
+});
+
 coursesRouter.get("/course-list/", (req, res) => {
   const { term, school, subject } = req.body;
 
